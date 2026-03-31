@@ -415,6 +415,7 @@ class GraphVis {
     this.nodes=nodes; this.edges=edges;
     this.pan={x:0,y:0}; this.scale=1;
     this.showEdges=true; this.showLabels=false;
+    this.showOriginal=false;
     this._initPositions();
     this._bindEvents();
     this._loop();
@@ -487,12 +488,19 @@ class GraphVis {
       });
     }
     this.nodes.forEach(n=>{
-      // B&W: white for low-index community, shades of gray for others
-      const idx=n.community%15;
-      const grayVal=Math.round(255-idx*14);
       const r=Math.max(3,Math.log(n.degree+1)*2.8);
       ctx.beginPath(); ctx.arc(n.px,n.py,r,0,Math.PI*2);
-      ctx.fillStyle=`rgba(${grayVal},${grayVal},${grayVal},0.85)`; ctx.fill();
+      
+      if (this.showOriginal) {
+        ctx.fillStyle=`rgba(180,180,180,0.85)`;
+      } else {
+        // B&W: white for low-index community, shades of gray for others
+        const idx=n.community%15;
+        const grayVal=Math.round(255-idx*14);
+        ctx.fillStyle=`rgba(${grayVal},${grayVal},${grayVal},0.85)`; 
+      }
+      
+      ctx.fill();
       ctx.strokeStyle=`rgba(255,255,255,0.2)`; ctx.lineWidth=.5; ctx.stroke();
       if(this.showLabels&&r>5){
         ctx.fillStyle="#cccccc"; ctx.font=`${Math.max(7,r)}px Inter`;
@@ -503,6 +511,7 @@ class GraphVis {
   }
   setShowEdges(v){this.showEdges=v;}
   setShowLabels(v){this.showLabels=v;}
+  setShowOriginal(v){this.showOriginal=v;}
   reset(){this.pan={x:0,y:0};this.scale=1;}
 }
 
@@ -619,6 +628,22 @@ async function init() {
   if(graphData?.nodes?.length){
     buildLegend(graphData.nodes);
     const vis=new GraphVis("graphCanvas",graphData.nodes,graphData.edges);
+    
+    const btnForce = document.getElementById("vcForce");
+    const btnRaw = document.getElementById("vcRaw");
+    
+    btnForce?.addEventListener("click", () => {
+      vis.setShowOriginal(false);
+      btnForce.classList.add("active");
+      btnRaw?.classList.remove("active");
+    });
+    
+    btnRaw?.addEventListener("click", () => {
+      vis.setShowOriginal(true);
+      btnRaw.classList.add("active");
+      btnForce?.classList.remove("active");
+    });
+
     document.getElementById("vcEdges")?.addEventListener("change",e=>vis.setShowEdges(e.target.checked));
     document.getElementById("vcLabels")?.addEventListener("change",e=>vis.setShowLabels(e.target.checked));
     document.getElementById("vcReset")?.addEventListener("click",()=>vis.reset());
