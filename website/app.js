@@ -422,6 +422,8 @@ class GraphVis {
   }
   _initPositions() {
     const W=this.canvas.offsetWidth||800, H=this.canvas.offsetHeight||520;
+    
+    // 1. Calculate Community Positions (The 'After' state)
     const commMap={};
     this.nodes.forEach(n=>{
       if(!commMap[n.community])commMap[n.community]=[];
@@ -435,10 +437,21 @@ class GraphVis {
       comm.forEach((n,ni)=>{
         const a2=(ni/comm.length)*Math.PI*2;
         const r2=Math.min(W,H)*0.07;
-        n.px=cx+Math.cos(a2)*r2+(Math.random()-.5)*16;
-        n.py=cy+Math.sin(a2)*r2+(Math.random()-.5)*16;
-        n.vx=0; n.vy=0;
+        n.txComm = cx+Math.cos(a2)*r2+(Math.random()-.5)*16;
+        n.tyComm = cy+Math.sin(a2)*r2+(Math.random()-.5)*16;
       });
+    });
+
+    // 2. Calculate Raw Messy Positions (The 'Before' state - giant hairball)
+    this.nodes.forEach((n, i) => {
+      const a = (i/this.nodes.length) * Math.PI*2 + Math.random();
+      const radius = Math.random() * (Math.min(W,H) * 0.4);
+      n.txRaw = W/2 + Math.cos(a)*radius;
+      n.tyRaw = H/2 + Math.sin(a)*radius;
+      
+      // Set initial positions
+      n.px = n.txComm;
+      n.py = n.tyComm;
     });
   }
   _bindEvents() {
@@ -464,9 +477,20 @@ class GraphVis {
       t0={x:e.touches[0].clientX,y:e.touches[0].clientY};
     });
   }
+  _updatePhysics() {
+    const ease = 0.06;
+    this.nodes.forEach(n => {
+      const targetX = this.showOriginal ? n.txRaw : n.txComm;
+      const targetY = this.showOriginal ? n.tyRaw : n.tyComm;
+      n.px += (targetX - n.px) * ease;
+      n.py += (targetY - n.py) * ease;
+    });
+  }
+
   _loop() {
     this.canvas.width=this.canvas.offsetWidth;
     this.canvas.height=this.canvas.offsetHeight;
+    this._updatePhysics();
     this._draw();
     requestAnimationFrame(()=>this._loop());
   }
